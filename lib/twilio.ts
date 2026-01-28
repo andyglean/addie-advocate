@@ -1,20 +1,29 @@
-import { config } from 'dotenv';
-import path from 'path';
 import Twilio from 'twilio';
 
-// Load .env.local explicitly for scripts
-config({ path: path.join(process.cwd(), '.env.local') });
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const fromNumber = process.env.TWILIO_FROM_NUMBER;
-const toNumber = process.env.TWILIO_TO_NUMBER;
-
-if (!accountSid || !authToken || !fromNumber || !toNumber) {
-	throw new Error('Missing Twilio configuration in environment variables');
+// Get config at runtime, not at import time
+function getConfig() {
+	const accountSid = process.env.TWILIO_ACCOUNT_SID;
+	const authToken = process.env.TWILIO_AUTH_TOKEN;
+	const fromNumber = process.env.TWILIO_FROM_NUMBER;
+	const toNumber = process.env.TWILIO_TO_NUMBER;
+	
+	return { accountSid, authToken, fromNumber, toNumber };
 }
 
-export const twilioClient = Twilio(accountSid, authToken);
+// Lazy initialization of Twilio client
+let twilioClient: ReturnType<typeof Twilio> | null = null;
+
+function getTwilioClient() {
+	if (!twilioClient) {
+		const { accountSid, authToken } = getConfig();
+		if (!accountSid || !authToken) {
+			console.warn('Twilio credentials not configured');
+			return null;
+		}
+		twilioClient = Twilio(accountSid, authToken);
+	}
+	return twilioClient;
+}
 
 export interface LeadNotification {
 	name: string;
@@ -24,6 +33,14 @@ export interface LeadNotification {
 }
 
 export async function sendLeadNotification(lead: LeadNotification) {
+	const { fromNumber, toNumber } = getConfig();
+	const client = getTwilioClient();
+	
+	if (!client || !fromNumber || !toNumber) {
+		console.warn('Twilio not configured, skipping notification');
+		return { success: false, error: 'Twilio not configured' };
+	}
+
 	const message = `
 🚗 New Lead from Addie
 
@@ -36,7 +53,7 @@ ${lead.description}
 	`.trim();
 
 	try {
-		const result = await twilioClient.messages.create({
+		const result = await client.messages.create({
 			body: message,
 			from: fromNumber,
 			to: toNumber,
