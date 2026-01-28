@@ -86,7 +86,7 @@ export function ChatPanel({ language = "en", initialMessage }: ChatPanelProps) {
 			// Check if response contains lead notification trigger
 			if (assistantContent.includes('LEAD_NOTIFICATION:')) {
 				const match = assistantContent.match(/LEAD_NOTIFICATION:\s*({[\s\S]*?})/);
-				if (match) {
+				if (match && match[1]) {
 					try {
 						const leadData = JSON.parse(match[1]);
 						// Send notification in background

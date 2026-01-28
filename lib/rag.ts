@@ -6,7 +6,11 @@ export async function embedText(text: string): Promise<number[]> {
 		model: "text-embedding-3-small",
 		input: text
 	});
-	return res.data[0].embedding as unknown as number[];
+	const embedding = res.data[0]?.embedding;
+	if (!embedding) {
+		throw new Error("Failed to generate embedding");
+	}
+	return embedding as unknown as number[];
 }
 
 export async function searchKnowledge(query: string, topK = 5) {

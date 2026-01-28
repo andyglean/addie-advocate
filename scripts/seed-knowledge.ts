@@ -9,7 +9,11 @@ async function embed(text: string) {
     model: "text-embedding-3-small",
     input: text
   });
-  return res.data[0].embedding as unknown as number[];
+  const embedding = res.data[0]?.embedding;
+  if (!embedding) {
+    throw new Error("Failed to generate embedding");
+  }
+  return embedding as unknown as number[];
 }
 
 function chunkText(text: string, maxChars = 3000, overlap = 400) {
